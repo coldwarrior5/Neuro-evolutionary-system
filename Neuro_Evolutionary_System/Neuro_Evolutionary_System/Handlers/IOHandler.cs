@@ -2,14 +2,13 @@
 using System.IO;
 using System.Linq;
 using Neuro_Evolutionary_System.Structures;
+// ReSharper disable UnusedMember.Local
 
 namespace Neuro_Evolutionary_System.Handlers
 {
 	public static class IoHandler
 	{
 		private static readonly string[] TerminationExpressions = {"quit", "stop", "exit", "terminate", "q"};
-		public const int MaxIterations = 10000;
-		public const double MinError = 1;
 
 		public static InputData GetParameters(string[] args)
 		{
@@ -38,7 +37,6 @@ namespace Neuro_Evolutionary_System.Handlers
 		private static InputData UserInput()
 		{
 			InputData inputData = new InputData();
-			InputData settingsData = new InputData();
 			NotifyUserOfTermination();
 			Console.WriteLine("Filename, including path, of test data.");
 			inputData.SetTestDataFileName(AskForFileName());
@@ -62,7 +60,7 @@ namespace Neuro_Evolutionary_System.Handlers
 
 			if (!File.Exists(args[1]))
 				ErrorHandler.TerminateExecution(ErrorCode.NoSuchFile, args[1]);
-			inputData.SetTestDataFileName(args[0]);
+			inputData.SetSettingsFileName(args[1]);
 			return inputData;
 		}
 
@@ -188,6 +186,18 @@ namespace Neuro_Evolutionary_System.Handlers
 			if (!TryParse(pertinentArgument, out double precise))
 				ErrorHandler.TerminateExecution(ErrorCode.InvalidInputParameter, pertinentArgument);
 			inputVariable = precise;
+		}
+
+		public static void ClearCurrentConsoleLine(int cursorTop)
+		{
+			int currentLineCursor = Console.CursorTop;
+			for (int i = currentLineCursor; i > cursorTop; i--)
+			{
+				Console.SetCursorPosition(0, i);
+				Console.Write(new string(' ', Console.WindowWidth));
+			}
+			
+			Console.SetCursorPosition(0, cursorTop);
 		}
 	}
 }

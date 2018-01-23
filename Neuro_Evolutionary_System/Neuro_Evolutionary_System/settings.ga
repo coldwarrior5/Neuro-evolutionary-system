@@ -1,0 +1,12 @@
+%% ****  GA settings  ****
+% Algorithm type Elimination
+% Mortality 0.6
+% Mutation probability 0.3
+% Population size 100
+% Number of iteration since last found solution 10000
+% Maximum number of iterations 50000
+% Minimum desired error 0.0000001
+% Sigmas 0.01 0.01
+% Sigma mutation probabilities 0.04 0.04
+% Sigma probabilities 0.8
+% Architecture 2 8 3

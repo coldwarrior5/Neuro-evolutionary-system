@@ -6,10 +6,10 @@ namespace Neuro_Evolutionary_System.ANN
 {
 	public class NeuralNetwork
 	{
-		public int NumberOfLayers { get; }
+		private int NumberOfLayers { get; }
 		private int _numberOfParameters;
-		private int[] _architectureSchema;
-		private INeuronLayer[] _layers;
+		private readonly int[] _architectureSchema;
+		private readonly INeuronLayer[] _layers;
 		private LayerInfo[] _architecture;
 		
 		public NeuralNetwork(int[] architecture)
@@ -23,14 +23,12 @@ namespace Neuro_Evolutionary_System.ANN
 		private void InitNetwork()
 		{
 			DefineArchitecture(out LayerInfo[] architecture);
-			if (_architecture is null || !_architecture.Equals(architecture))
+			if (!(_architecture is null) && _architecture.Equals(architecture)) return;
+			_architecture = architecture;
+			for (int i = 0; i < NumberOfLayers; i++)
 			{
-				_architecture = architecture;
-				for (int i = 0; i < NumberOfLayers; i++)
-				{
-					_layers[i] = new NeuronLayer(architecture[i]);
-					_numberOfParameters += architecture[i].NumberOfParameters;
-				}
+				_layers[i] = new NeuronLayer(architecture[i]);
+				_numberOfParameters += architecture[i].NumberOfParameters;
 			}
 		}
 
@@ -39,38 +37,49 @@ namespace Neuro_Evolutionary_System.ANN
 			architecture = new LayerInfo[NumberOfLayers];
 			for (int i = 0; i < NumberOfLayers; i++)
 			{
-				if (i == 0)
-					architecture[i] = new LayerInfo(1, _architectureSchema[i], NeuronType.Input);
-				else if(i == 1)
-					architecture[i] = new LayerInfo(_architectureSchema[i - 1], _architectureSchema[i], NeuronType.Type1Neuron);
-				else
-					architecture[i] = new LayerInfo(_architectureSchema[i - 1], _architectureSchema[i], NeuronType.Type2Neuron);
+				switch (i)
+				{
+					case 0:
+						architecture[i] = new LayerInfo(1, _architectureSchema[i], NeuronType.Input);
+						break;
+					case 1:
+						architecture[i] = new LayerInfo(_architectureSchema[i - 1], _architectureSchema[i], NeuronType.Type1Neuron);
+						break;
+					default:
+						architecture[i] = new LayerInfo(_architectureSchema[i - 1], _architectureSchema[i], NeuronType.Type2Neuron);
+						break;
+				}
 			}
 		}
 		
 		public void SetWeights(double[] newWeights)
 		{
-			int index = 0;
-			for (int i = 1; i < NumberOfLayers; i++)
+			var index = 0;
+			for (var i = 1; i < NumberOfLayers; i++)
 			{
-				if (_architecture[i].Type == NeuronType.Type1Neuron)
+				switch (_architecture[i].Type)
 				{
-					int length = _architecture[i].NumberOfNeurons * _architecture[i].InputSize * 2;
-					double[] newData = SubArray(newWeights, index, length);
-					index += length;
-					_layers[i].SetWeights(newData);
-				}
-				else if (_architecture[i].Type == NeuronType.Type2Neuron)
-				{
-					int length = _architecture[i].NumberOfNeurons * (_architecture[i].InputSize + 1);
-					double[] newData = SubArray(newWeights, index, length);
-					index += length;
-					_layers[i].SetWeights(newData);
+					case NeuronType.Type1Neuron:
+					{
+						int length = _architecture[i].NumberOfNeurons * _architecture[i].InputSize * 2;
+						double[] newData = SubArray(newWeights, index, length);
+						index += length;
+						_layers[i].SetWeights(newData);
+						break;
+					}
+					case NeuronType.Type2Neuron:
+					{
+						int length = _architecture[i].NumberOfNeurons * (_architecture[i].InputSize + 1);
+						double[] newData = SubArray(newWeights, index, length);
+						index += length;
+						_layers[i].SetWeights(newData);
+						break;
+					}
 				}
 			}
 		}
 
-		public T[] SubArray<T>(T[] data, int index, int length)
+		private static T[] SubArray<T>(T[] data, int index, int length)
 		{
 			T[] result = new T[length];
 			Array.Copy(data, index, result, 0, length);

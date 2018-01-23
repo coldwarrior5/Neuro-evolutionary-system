@@ -37,7 +37,9 @@ namespace Neuro_Evolutionary_System.Structures
 		Mortality,
 		PopulationSize,
 		MutationProbability,
+		MutationProbabilities,
 		MaxNoChange,
+		MaxIter,
 		MinError,
 		Sigmas,
 		Probabilities,
@@ -50,6 +52,8 @@ namespace Neuro_Evolutionary_System.Structures
 		public double Mortality { get; private set; }
 		public int PopulationSize { get; private set; }
 		public double MutationProbability { get; private set; }
+		public double[] MutationProbabilities { get; private set; }
+		public double MaxNoChange { get; private set; }
 		public double MaxIter { get; private set; }
 		public double MinError { get; private set; }
 		public double[] Sigmas { get; private set; }
@@ -63,11 +67,13 @@ namespace Neuro_Evolutionary_System.Structures
 			Mortality = 0.5;
 			PopulationSize = 100;
 			MutationProbability = 0.01;
-			MaxIter = 1000;
-			MinError = 0;
-			Sigmas = new[] { 1, 0.1 };
-			Probabilities = new[] { 0.4 };
-			Architecture = new[] {2, 8, 3};
+			MaxIter = 20000;
+			MaxNoChange = 1000;
+			MinError = 0.0000001;
+			SetSigmas(new []{1.0, 1.0});
+			SetMutationProbabilities(new []{0.04, 0.04});
+			SetProbablities(new []{0.6});
+			SetArchitecture(new []{2,8,3});
 		}
 
 		public void SetAlgorithmType(AlgorithmType type)
@@ -90,6 +96,16 @@ namespace Neuro_Evolutionary_System.Structures
 			MutationProbability = mutationProbability;
 		}
 
+		public void SetMutationProbabilities(double[] mutationProbabilities)
+		{
+			MutationProbabilities = mutationProbabilities;
+		}
+
+		public void SetMaxNoChange(int maxNoChange)
+		{
+			MaxNoChange = maxNoChange;
+		}
+		
 		public void SetMaxIter(int maxIter)
 		{
 			MaxIter = maxIter;
@@ -104,7 +120,7 @@ namespace Neuro_Evolutionary_System.Structures
 
 		public void SetProbablities(double[] probablilities)
 		{
-			if (Sigmas != null && (Sigmas.Length < probablilities.Length - 1 || Sigmas.Length > probablilities.Length))
+			if (Sigmas != null && (Sigmas.Length < probablilities.Length || Sigmas.Length - 1 > probablilities.Length))
 				ErrorHandler.TerminateExecution(ErrorCode.SigmaProbabilityMismatch);
 			Probabilities = probablilities;
 		}
@@ -119,9 +135,7 @@ namespace Neuro_Evolutionary_System.Structures
 			TotalParams = architecture[1] * architecture[0] * 2;
 			Architecture = architecture;
 			for (int i = 2; i < architecture.Length; i++)
-			{
 				TotalParams += architecture[i] * (architecture[i - 1] + 1);
-			}
 		}
 	}	
 }

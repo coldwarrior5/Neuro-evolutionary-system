@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Neuro_Evolutionary_System.ANN;
+using Neuro_Evolutionary_System.ANN.Functions;
 using Neuro_Evolutionary_System.Interfaces;
 using Neuro_Evolutionary_System.Structures;
 
@@ -10,39 +11,49 @@ namespace Neuro_Evolutionary_System.GA
 	public abstract class Ga
 	{
 		protected readonly GaSettings Settings;
-		protected readonly Instance Instance;
-		private double[] _expectedOutput;
-		private double[] _inputs;
+		private readonly Instance _instance;
+		private double[][] _expectedOutput;
 
 		protected Genome[] Population;
 		protected readonly Genome BestGenome;
-		protected readonly Random Rand;
-		private NeuralNetwork _ann;
+		private readonly Random _rand;
+		private readonly NeuralNetwork _ann;
 
 		protected Ga(IParser parser)
 		{
-			parser.ParseData(out Settings, out Instance);
-			BestGenome = new Genome(new double[Settings.TotalParams]);
-			Rand = new Random();
+			parser.ParseData(out Settings, out _instance);
+			BestGenome = new Genome();
+			_rand = new Random();
 			_ann = new NeuralNetwork(Settings.Architecture);
 			InitExpectedOutput();
 		}
 
 		private void InitExpectedOutput()
 		{
-			_inputs = new double[Instance.Size * Instance.Samples[0].Variables.Length];
-			_expectedOutput = new double[Instance.Size * Instance.Classes.Length];
-			int indexInput = 0;
-			int indexClass = 0;
-			for (int i = 0; i < Instance.Size; i++)
+			_expectedOutput = new double[_instance.Size][];
+			for (int i = 0; i < _instance.Size; i++)
 			{
-				for (int j = 0; j < Instance.Classes.Length; j++)
+				_expectedOutput[i] = new double[_instance.Classes.Length];
+				for (int j = 0; j < _instance.Classes.Length; j++)
+					_expectedOutput[i][j] = _instance.Samples[i].Classes[j];
+			}
+		}
+
+		public void Test(out double[][] givenClasses, out double[][] expectedClasses)
+		{
+			expectedClasses = _expectedOutput;
+			givenClasses = new double[_instance.Size][];
+			var syncObject = new object();
+			lock (syncObject)
+				_ann.SetWeights(BestGenome.Genes);
+
+			for (int i = 0; i < _instance.Size; i++)
+			{
+				givenClasses[i] = new double[_instance.Classes.Length];
+				var output = _ann.GetOutput(_instance.Samples[i].Variables);
+				for (int j = 0; j < _instance.Classes.Length; j++)
 				{
-					_expectedOutput[indexClass++] = Instance.Samples[i].Classes[j];
-				}
-				for (int j = 0; j < Instance.Samples[0].Variables.Length; j++)
-				{
-					_expectedOutput[indexInput++] = Instance.Samples[i].Variables[j];
+					givenClasses[i][j] = output[j] < 0.5 ? 0 : 1;
 				}
 			}
 		}
@@ -51,65 +62,78 @@ namespace Neuro_Evolutionary_System.GA
 
 		protected void DeterminePopulationFitness()
 		{
-			object syncObject = new object();
-
-			Parallel.ForEach(Population, ()=> new Genome(new double[]{}), (genome, loopState, localState) =>
+			for (int i = 0; i < Population.Length; i++)
+			{
+				DetermineGenomeFitness(ref Population[i]);
+				if (Population[i].Fitness < BestGenome.Fitness)
+					BestGenome.Copy(Population[i]);
+			}
+			/*
+			Parallel.ForEach(Population, ()=> new Genome(), (genome, loopState, localState) =>
 			{
 				DetermineGenomeFitness(ref genome);
-				return genome.Fitness > localState.Fitness ? genome : localState;
+				return genome.Fitness < localState.Fitness ? genome : localState;
 			},
 			localState =>
 			{
 				lock (syncObject)
 				{
-					if(localState.Fitness > BestGenome.Fitness)
+					if(localState.Fitness < BestGenome.Fitness)
 						BestGenome.Copy(localState);
 				} 
 			});
+			*/
 		}
 		
 		protected void DetermineBestFitness()
 		{
-			object syncObject = new object();
 			foreach (Genome t in Population)
 			{
-				lock (syncObject)
-				{
-					if(t.Fitness > BestGenome.Fitness)
-						BestGenome.Copy(t);
-				}
+				if(t.Fitness < BestGenome.Fitness)
+					BestGenome.Copy(t);
 			}
 		}
 
         protected void DetermineGenomeFitness(ref Genome genome)
 		{
+			double[][] givenOutput = new double[_instance.Size][];
 			var genes = genome.Genes;
 			_ann.SetWeights(genes);
-			var givenOutput = _ann.GetOutput(_inputs);
-			genome.Fitness = FitnessFunctions.Fitness1(_expectedOutput, givenOutput);
+			for (int i = 0; i < _instance.Size; i++)
+			{
+				givenOutput[i] = new double[_instance.Samples[i].Variables.Length];
+				givenOutput[i] = _ann.GetOutput(_instance.Samples[i].Variables);
+			}
+			genome.Fitness = Error.Evaluate(givenOutput, _expectedOutput);
 		}
 
 		protected void Crossover(Genome first, Genome second, ref Genome child)
 		{
-			int which =Rand.Next(0, 4);
+			int which =_rand.Next(0, 3);
 			switch (which)
 			{
 				case 0:
-					CrossoverMethods.DiscreteRecombination(first, second, ref child, Rand);
+					CrossoverMethods.DiscreteRecombination(first, second, ref child, _rand);
 					break;
 				case 1:
-					CrossoverMethods.SimpleArithmeticRecombination(first, second, ref child, Rand);
+					CrossoverMethods.BetterParent(first, second, ref child, _rand);
 					break;
 				case 2:
-					CrossoverMethods.SingleArithmeticRecombination(first, second, ref child, Rand);
-					break;
-				case 3:
-					CrossoverMethods.WholeArithmeticRecombination(first, second, ref child, Rand);
+					CrossoverMethods.WholeArithmeticRecombination(first, second, ref child, _rand);
 					break;
 				default:
 					child = null;
 					break;
 			}
+		}
+		
+		protected void Mutation(ref Genome gene, int index)
+		{
+			bool first = _rand.NextDouble() < Settings.Probabilities[0];
+			if (first)
+				MutationMethods.SlightMutation(ref gene, index, Settings.Sigmas[0], Settings.MutationProbabilities[0], _rand);
+			else
+				MutationMethods.Replace(ref gene, index, Settings.Sigmas[1], Settings.MutationProbabilities[1], _rand);
 		}
 
 		protected int RouletteWheelSelection(Random rand)
@@ -123,7 +147,7 @@ namespace Neuro_Evolutionary_System.GA
 			double value = rand.NextDouble() * totalFitness;
 			for (int i = 0; i < Population.Length; i++)
 			{
-				value -= 1.0 / Population[i].Fitness;
+				value -= 1.0/Population[i].Fitness;
 				if (value <= 0)
 					return i;
 			}
@@ -131,32 +155,25 @@ namespace Neuro_Evolutionary_System.GA
 			return Population.Length - 1;
 		}
 
-		protected void Mutation(ref Genome gene, int index)
-		{
-			bool first = Rand.NextDouble() < Settings.Probabilities[0];
-			double stdDev = first ? Settings.Sigmas[0] : Settings.Sigmas[1];
-			MutationMethods.SlightMutation(ref gene, index, stdDev, Rand);
-		}
-
 		// ReSharper disable once RedundantAssignment
 		protected static void Order(List<Genome> order)
 		{
 			Genome temp;
 			Genome temp2;
-			double worstFitness = float.MaxValue;
+			double worstFitness = float.MinValue;
 			int worstIndex = 2;
-			double bestFitness = float.MinValue;
+			double bestFitness = float.MaxValue;
 			int bestIndex = 0;
 
 			for (int i = 0; i < 3; i++)
 			{
-				if (order[i].Fitness < worstFitness)
+				if (order[i].Fitness > worstFitness)
 				{
 					worstFitness = order[i].Fitness;
 					worstIndex = i;
 				}
 
-				if (order[i].Fitness > bestFitness)
+				if (order[i].Fitness < bestFitness)
 				{
 					bestFitness = order[i].Fitness;
 					bestIndex = i;
@@ -203,6 +220,7 @@ namespace Neuro_Evolutionary_System.GA
 
 		protected void RandomPopulation()
 		{
+			/*
 			Parallel.For(0, Population.Length, i =>
 			{
 				double[] field = new double[Settings.TotalParams];
@@ -210,14 +228,27 @@ namespace Neuro_Evolutionary_System.GA
 				{
 					do
 					{
-						field[j] = Rand.NextDouble() * 2 - 1;
-					} while (field[j] < Double.Epsilon);
+						field[j] = _rand.NextDouble() * 2 - 1;
+					} while (field[j] < double.Epsilon);
 				}
 				Population[i] = new Genome(field);
 			});
+			*/
+			for (int i = 0; i < Population.Length; i++)
+			{
+				double[] field = new double[Settings.TotalParams];
+				for (int j = 0; j < Settings.TotalParams; j++)
+				{
+					do
+					{
+						field[j] = _rand.NextDouble() / 2;
+					} while (field[j] < double.Epsilon);
+				}
+				Population[i] = new Genome(field);
+			}
 			DeterminePopulationFitness();
 		}
-
+		
 		protected static void RandomPopulation(int paramSize, Genome[] population)
 		{
 			Random rand = new Random();
@@ -228,8 +259,8 @@ namespace Neuro_Evolutionary_System.GA
 				{
 					do
 					{
-						field[j] = rand.NextDouble() * 2 - 1;
-					} while (field[j] < Double.Epsilon);
+						field[j] = rand.NextDouble() /2;
+					} while (field[j] < double.Epsilon);
 				}
 				population[i] = new Genome(field);
 			});
@@ -243,7 +274,7 @@ namespace Neuro_Evolutionary_System.GA
 			firstChild.Fitness = Single.MaxValue;
 			for (int i = 0; i < firstChild.Genes.Length; i++)
 			{
-				firstChild.Genes[i] = rand.NextDouble() > 0.5 ? firstParent.Genes[i] : secondParent.Genes[i];
+				firstChild.Genes[i] = rand.NextDouble() < 0.5 ? firstParent.Genes[i] : secondParent.Genes[i];
 			}
 		}
 
@@ -258,12 +289,9 @@ namespace Neuro_Evolutionary_System.GA
 			}
 		}
 
-		public static void SingleArithmeticRecombination(Genome firstParent, Genome secondParent, ref Genome firstChild, Random rand)
+		public static void BetterParent(Genome firstParent, Genome secondParent, ref Genome firstChild, Random rand)
 		{
-			int location = rand.Next(0, firstChild.Genes.Length);
 			firstChild.Copy(firstParent);
-			firstChild.Fitness = Single.MaxValue;
-			firstChild.Genes[location] = Average(firstParent.Genes[location], secondParent.Genes[location]);
 		}
 
 		public static void WholeArithmeticRecombination(Genome firstParent, Genome secondParent, ref Genome firstChild, Random rand)
@@ -277,16 +305,24 @@ namespace Neuro_Evolutionary_System.GA
 
 		private static double Average(double first, double second)
 		{
-			return first + (second - first) / 2;
+			return (first + second) / 2;
 		}
 	}
 
 	public static class MutationMethods
 	{
-		public static void SlightMutation(ref Genome gene, int index, double stdDev, Random rand)
+		public static void SlightMutation(ref Genome gene, int index, double stdDev, double mutationProbability, Random rand)
 		{
+			if (rand.NextDouble() >= mutationProbability) return;
 			double delta = NormalDistribution(rand, 0, stdDev);
 			gene.Genes[index] += delta;
+		}
+
+		public static void Replace(ref Genome gene, int index, double stdDev, double mutationProbability, Random rand)
+		{
+			if (rand.NextDouble() >= mutationProbability) return;
+			double delta = NormalDistribution(rand, 0, stdDev);
+			gene.Genes[index] = delta;
 		}
 
 		private static double NormalDistribution(Random rand, double mean, double stdDev)

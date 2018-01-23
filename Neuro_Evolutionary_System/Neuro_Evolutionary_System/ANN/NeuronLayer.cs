@@ -46,34 +46,39 @@ namespace Neuro_Evolutionary_System.ANN
 			double[] outputs = new double[Architecture.NumberOfNeurons];
 			for (int i = 0; i < Architecture.NumberOfNeurons; i++)
 			{
-				outputs[i] = Architecture.InputSize == 1 ? _neurons[i].GetOutput(new[] { inputs[i] }, i) : _neurons[i].GetOutput(inputs, i);
+				outputs[i] = Architecture.InputSize == 1 ? _neurons[i].GetOutput(new[] { inputs[i] }) : _neurons[i].GetOutput(inputs);
 			}
 			return outputs;
 		}
 
 		public void SetWeights(double[] newWeights)
 		{
-			int index = 0;
-			for (int i = 1; i < Architecture.NumberOfNeurons; i++)
+			var index = 0;
+			for (var i = 0; i < Architecture.NumberOfNeurons; i++)
 			{
-				if (Architecture.Type == NeuronType.Type1Neuron)
+				switch (Architecture.Type)
 				{
-					int length = Architecture.InputSize * 2;
-					double[] newData = SubArray(newWeights, index, length);
-					index += length;
-					_neurons[i].SetWeights(newData);
-				}
-				else if (Architecture.Type == NeuronType.Type2Neuron)
-				{
-					int length = Architecture.InputSize + 1;
-					double[] newData = SubArray(newWeights, index, length);
-					index += length;
-					_neurons[i].SetWeights(newData);
+					case NeuronType.Type1Neuron:
+					{
+						int length = Architecture.InputSize * 2;
+						double[] newData = SubArray(newWeights, index, length);
+						index += length;
+						_neurons[i].SetWeights(newData);
+						break;
+					}
+					case NeuronType.Type2Neuron:
+					{
+						int length = Architecture.InputSize + 1;
+						double[] newData = SubArray(newWeights, index, length);
+						index += length;
+						_neurons[i].SetWeights(newData);
+						break;
+					}
 				}
 			}
 		}
 
-		public T[] SubArray<T>(T[] data, int index, int length)
+		private static T[] SubArray<T>(T[] data, int index, int length)
 		{
 			T[] result = new T[length];
 			Array.Copy(data, index, result, 0, length);
@@ -84,7 +89,7 @@ namespace Neuro_Evolutionary_System.ANN
 		{
 			double[] allWeights = new double[Architecture.NumberOfParameters];
 			int index = 0;
-			for (int i = 1; i < Architecture.NumberOfNeurons; i++)
+			for (int i = 0; i < Architecture.NumberOfNeurons; i++)
 			{
 				double[] weights = _neurons[i].GetWeights();
 				foreach (double t in weights)

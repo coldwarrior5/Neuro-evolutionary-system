@@ -10,20 +10,17 @@ namespace Neuro_Evolutionary_System
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Genetic algorithm");
-	        Genome result = Start(args);
-			Console.WriteLine("Proces is finished");
-			Console.Write("Best result is: " + result.Fitness + ", with parameters: ");
-			PrintParameters(result.Genes);
-			Console.WriteLine("with fitness: " + result.Fitness.ToString("G10"));
+            Console.WriteLine("Genetic algorithm\n");
+	        Start(args);
+	        Console.WriteLine("\nApplication finished execution");
         }
 
-	    static Genome Start(string[] args)
+	    static void Start(string[] args)
 	    {
 		    InputData inputData = IoHandler.GetParameters(args);
 			IParser parser = new Parser(inputData);
 		    GaSettings settings = parser.ParseSettings();
-		    Ga algorithm = null;
+		    Ga algorithm ;
 		    switch (settings.Type)
 		    {
 				case AlgorithmType.Generation:
@@ -32,9 +29,48 @@ namespace Neuro_Evolutionary_System
 				case AlgorithmType.Elimination:
 					algorithm = new EliminationGa(parser);
 					break;
+			    default:
+				    throw new ArgumentOutOfRangeException();
+		    }
+		    Genome bestSolution = algorithm.Start();
+		    Console.WriteLine("\n____________Proces is finished____________\n");
+		    if (bestSolution != null)
+		    {
+			    Console.Write("Best result is: " + bestSolution.Fitness + ", with parameters: ");
+			    PrintParameters(bestSolution.Genes);
 			}
-		    Genome bestSolution = algorithm?.Start();
-			return bestSolution;
+		    Console.WriteLine("\n____________Classification____________\n");
+		    algorithm.Test(out double[][] givenClasses, out double[][]expectedOutput);
+			bool[] correct = new bool[expectedOutput.Length];
+		    for (int i = 0; i < expectedOutput.Length; i++)
+		    {
+			    correct[i] = true;
+			    Console.Write("Expected classes: ");
+			    for (int j = 0; j < expectedOutput[i].Length; j++)
+			    {
+				    Console.Write(expectedOutput[i][j].ToString("G0") + " ");
+			    }
+			    Console.Write("\tGiven classes: ");
+			    for (int j = 0; j < givenClasses[i].Length; j++)
+			    {
+				    Console.Write(givenClasses[i][j].ToString("G0") + " ");
+				    if (!(Math.Abs(expectedOutput[i][j] - givenClasses[i][j]) < double.Epsilon))
+						correct[i] = false;
+				    
+				    
+			    }
+			    Console.WriteLine(correct[i] ? "\tCorrect classification." : "\tIncorrect classification.");
+		    }
+		    int correctlyClassified = 0;
+		    int incorrectlyClassified = 0;
+		    for (int i = 0; i < correct.Length; i++)
+		    {
+			    if (correct[i])
+				    correctlyClassified++;
+			    else
+				    incorrectlyClassified++;
+		    }
+			Console.WriteLine("Correctly classified samples: " + correctlyClassified + ", incorrectly classified: " + incorrectlyClassified);
 	    }
 
 	    public static void PrintParameters(double[] param)

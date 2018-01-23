@@ -15,7 +15,7 @@ namespace Neuro_Evolutionary_System.ANN.NeuronClasses
 			_function = new Similarity(inputSize);
 		}
 
-		public double GetOutput(double[] input, int position)
+		public double GetOutput(double[] input)
 		{
 			if (input.Length != InputSize)
 				throw new ArgumentException("This neuron accepts exactly " + InputSize + " numbers.");

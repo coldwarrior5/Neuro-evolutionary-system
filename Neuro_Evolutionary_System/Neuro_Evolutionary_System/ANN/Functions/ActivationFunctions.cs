@@ -9,8 +9,8 @@ namespace Neuro_Evolutionary_System.ANN.Functions
 	{
 		public double ValueAt(double x)
 		{
-			double k = Math.Exp(x);
-			return k / (1.0f + k);
+			double k = Math.Exp(-x);
+			return 1.0 / (1.0f + k);
 		}
 	}
 
@@ -24,7 +24,7 @@ namespace Neuro_Evolutionary_System.ANN.Functions
 
 	public class Similarity : IAdaptingFunction
 	{
-		public int Size { get; }
+		private int Size { get; }
 		private readonly double[] _w;
 		private readonly double[] _s;
 

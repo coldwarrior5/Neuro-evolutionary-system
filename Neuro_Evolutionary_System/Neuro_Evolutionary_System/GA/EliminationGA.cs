@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using Neuro_Evolutionary_System.Handlers;
 using Neuro_Evolutionary_System.Interfaces;
 
 namespace Neuro_Evolutionary_System.GA
@@ -14,6 +14,7 @@ namespace Neuro_Evolutionary_System.GA
 
 		public override Genome Start()
 		{
+			int cursorPosition = Console.CursorTop;
 			int i = 0;
 			int lastFound = 0;
 			int howManyDies = (int)(Settings.Mortality * Settings.PopulationSize);
@@ -21,17 +22,23 @@ namespace Neuro_Evolutionary_System.GA
 			RandomPopulation();
 			Console.Write(i + " iteration. Current best: ");
 			Program.PrintParameters(BestGenome.Genes);
-			Console.WriteLine("with fitness: " + BestGenome.Fitness.ToString("G10"));
-			while (BestGenome.Fitness > Settings.MinError && lastFound < Settings.MaxIter)
+			Console.Write("with fitness: " + BestGenome.Fitness.ToString("G10"));
+
+			while (BestGenome.Fitness > Settings.MinError && i++ - lastFound < Settings.MaxNoChange && i < Settings.MaxIter)
 			{
 				lastBest.Copy(BestGenome);
-				Parallel.For(0, howManyDies, ThreeTournament);	// Mortality determines how many times we should do the Tournaments
+				for (int j = 0; j < howManyDies; j++)
+				{
+					ThreeTournament(j);
+				}
+				//Parallel.For(0, howManyDies, ThreeTournament);
 				DetermineBestFitness();
 				if (!(BestGenome.Fitness < lastBest.Fitness)) continue;
 				lastFound = i;
+				IoHandler.ClearCurrentConsoleLine(cursorPosition);
 				Console.Write(i + " iteration. Current best: ");
 				Program.PrintParameters(BestGenome.Genes);
-				Console.WriteLine("with fitness: " +  BestGenome.Fitness.ToString("G10"));
+				Console.Write("with fitness: " +  BestGenome.Fitness.ToString("G10"));
 			}
 			return BestGenome;
 		}
@@ -42,7 +49,7 @@ namespace Neuro_Evolutionary_System.GA
 			List<int> choices = new List<int>(3);
 			while (true)
 			{
-				int randNum = rnd.Next(1, Settings.PopulationSize);
+				int randNum = rnd.Next(0, Settings.PopulationSize);
 				if (choices.Contains(randNum)) continue;
 				choices.Add(randNum);
 				if(choices.Count == 3)
@@ -60,11 +67,12 @@ namespace Neuro_Evolutionary_System.GA
 			Order(order);
 
 			Crossover(order[0], order[1], ref temp);
-			for (int i = 0; i < temp.Genes.Length; i++)
+			if (rnd.NextDouble() < Settings.MutationProbability)
 			{
-				if (Rand.NextDouble() < Settings.MutationProbability)
+				for (int i = 0; i < temp.Genes.Length; i++)
 					Mutation(ref temp, i);
 			}
+			
 			DetermineGenomeFitness(ref temp);
 			order[2].Copy(temp);
 		}

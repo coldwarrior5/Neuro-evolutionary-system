@@ -21,7 +21,7 @@
 					NumberOfParameters = inputSize * numberOfNeurons * 2;
 					break;
 				case NeuronType.Type2Neuron:
-					NumberOfParameters = inputSize + 1;
+					NumberOfParameters = (inputSize + 1) * numberOfNeurons;
 					break;
 				default:
 					NumberOfParameters = 0;

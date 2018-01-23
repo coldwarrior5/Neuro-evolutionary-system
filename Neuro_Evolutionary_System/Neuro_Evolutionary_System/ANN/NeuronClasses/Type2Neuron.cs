@@ -6,7 +6,7 @@ namespace Neuro_Evolutionary_System.ANN.NeuronClasses
 {
 	public class Type2Neuron : INeuron
 	{
-		public int InputSize { get; }
+		private int InputSize { get; }
 		private double[] _weights;
 		private IActivationFunction _function;
 
@@ -41,7 +41,7 @@ namespace Neuro_Evolutionary_System.ANN.NeuronClasses
 			_function = function;
 		}
 
-		public double GetOutput(double[] input, int position)
+		public double GetOutput(double[] input)
 		{
 			if (input.Length != InputSize)
 				throw new ArgumentException(@"Array input must have exact number of elements.");

@@ -1,11 +1,12 @@
-﻿using Neuro_Evolutionary_System.ANN.Functions;
+﻿using System;
+using Neuro_Evolutionary_System.ANN.Functions;
 using Neuro_Evolutionary_System.ANN.Interfaces;
 
 namespace Neuro_Evolutionary_System.ANN.NeuronClasses
 {
 	public class InputNeuron : INeuron
 	{
-		public int InputSize { get; }
+		private int InputSize { get; }
 		private readonly IActivationFunction _function;
 
 		public InputNeuron()
@@ -14,9 +15,11 @@ namespace Neuro_Evolutionary_System.ANN.NeuronClasses
 			_function = new Adaline();
 		}
 
-		public double GetOutput(double[] input, int position)
+		public double GetOutput(double[] input)
 		{
-			return _function.ValueAt(input[position]);
+			if (input.Length != InputSize)
+				throw new ArgumentException(@"Array input must have exact number of elements.");
+			return _function.ValueAt(input[0]);
 		}
 
 		public void SetWeights(double[] newWeights)

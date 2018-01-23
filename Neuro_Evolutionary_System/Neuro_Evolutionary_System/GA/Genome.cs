@@ -1,5 +1,3 @@
-using System;
-
 namespace Neuro_Evolutionary_System.GA
 {
     public class Genome
@@ -7,10 +5,16 @@ namespace Neuro_Evolutionary_System.GA
         public double[] Genes;
         public double Fitness;
 
-        public Genome(double[] genes)
+	    public Genome()
+	    {
+		    Genes = null;
+		    Fitness = double.MaxValue;
+	    }
+
+		public Genome(double[] genes)
         {
             Genes = genes;
-			Fitness = Double.MinValue;
+			Fitness = double.MaxValue;
         }
 
         public Genome(double[] genes, double fitness)
@@ -28,10 +32,9 @@ namespace Neuro_Evolutionary_System.GA
 		private static double[] DoubleCopy(double[] original)
 		{
 			double[] newGenes = new double[original.Length];
-			for (int i = 0; i < original.Length; i++)
-			{
+			for (var i = 0; i < original.Length; i++)
 				newGenes[i] = original[i];
-			}
+			
 			return newGenes;
 		}
     }

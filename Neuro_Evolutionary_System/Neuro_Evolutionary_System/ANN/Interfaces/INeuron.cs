@@ -2,7 +2,7 @@
 {
 	public interface INeuron
 	{
-		double GetOutput(double[] input, int position);
+		double GetOutput(double[] input);
 		void SetWeights(double[] newWeights);
 		double[] GetWeights();
 	}

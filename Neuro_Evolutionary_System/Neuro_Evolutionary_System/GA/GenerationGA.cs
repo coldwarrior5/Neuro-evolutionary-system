@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Neuro_Evolutionary_System.Handlers;
 using Neuro_Evolutionary_System.Interfaces;
 
 namespace Neuro_Evolutionary_System.GA
@@ -17,14 +18,15 @@ namespace Neuro_Evolutionary_System.GA
 
 		public override Genome Start()
 		{
+			int cursorPosition = Console.CursorTop;
 			int i = 0;
 			int lastFound = 0;
 			Genome lastBest = new Genome(null);
 			RandomPopulation();
 			Console.Write(i + " iteration. Current best: ");
 			Program.PrintParameters(BestGenome.Genes);
-			Console.WriteLine("with fitness: " + BestGenome.Fitness.ToString("G10"));
-			while (BestGenome.Fitness > Settings.MinError && lastFound < Settings.MaxIter)
+			Console.Write("with fitness: " + BestGenome.Fitness.ToString("G10"));
+			while (BestGenome.Fitness > Settings.MinError && lastFound < Settings.MaxNoChange && i++ < Settings.MaxIter)
 			{
 				lastBest.Copy(BestGenome);
 				_tempPopulation[0].Copy(BestGenome);
@@ -34,9 +36,10 @@ namespace Neuro_Evolutionary_System.GA
 				DeterminePopulationFitness();
 				if (!(BestGenome.Fitness < lastBest.Fitness)) continue;
 				lastFound = i;
+				IoHandler.ClearCurrentConsoleLine(cursorPosition);
 				Console.Write(i + " iteration. Current best: ");
 				Program.PrintParameters(BestGenome.Genes);
-				Console.WriteLine("with fitness: " + BestGenome.Fitness.ToString("G10"));
+				Console.Write("with fitness: " + BestGenome.Fitness.ToString("G10"));
 			}
 			return BestGenome;
 		}
@@ -52,12 +55,11 @@ namespace Neuro_Evolutionary_System.GA
 			}
 			
 
-			Genome temp = new Genome(new double[5]);
+			Genome temp = new Genome(new double[Settings.TotalParams]);
 			Crossover(Population[firstParentId], Population[secondParentId], ref temp);
-			
-			for (int i = 0; i < _tempPopulation[index].Genes.Length; i++)
+			if (rand.NextDouble() < Settings.MutationProbability)
 			{
-				if (rand.NextDouble() < Settings.MutationProbability)
+				for (int i = 0; i < _tempPopulation[index].Genes.Length; i++)
 					Mutation(ref _tempPopulation[index], i);
 			}
 			_tempPopulation[index].Copy(temp);
